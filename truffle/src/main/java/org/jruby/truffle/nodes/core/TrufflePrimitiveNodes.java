@@ -20,6 +20,7 @@ import com.oracle.truffle.api.frame.FrameInstanceVisitor;
 import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrument.Instrument;
+import com.oracle.truffle.api.instrumentation.EventBinding;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.object.DynamicObject;
 import com.oracle.truffle.api.source.Source;
@@ -373,8 +374,8 @@ public abstract class TrufflePrimitiveNodes {
         @TruffleBoundary
         @Specialization(guards = "isHandle(handle)")
         public DynamicObject detach(DynamicObject handle) {
-            final Instrument instrument = (Instrument) Layouts.HANDLE.getObject(handle);
-            instrument.dispose();
+            final EventBinding<?> binding = (EventBinding<?>) Layouts.HANDLE.getObject(handle);
+            binding.dispose();
             return getContext().getCoreLibrary().getNilObject();
         }
 

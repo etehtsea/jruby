@@ -17,6 +17,8 @@ import com.oracle.truffle.api.frame.FrameDescriptor;
 import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.instrument.*;
+import com.oracle.truffle.api.instrumentation.*;
+import com.oracle.truffle.api.instrumentation.Instrumenter;
 import com.oracle.truffle.api.nodes.DirectCallNode;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.nodes.RootNode;
@@ -42,95 +44,55 @@ import java.util.Map;
 
 public class AttachmentsManager {
 
-    public static final Source ATTACHMENT_SOURCE = Source.fromText("(attachment)", "(attachment)").withMimeType(RubyLanguage.MIME_TYPE);
-
     private final RubyContext context;
-    private final LineToProbesMap lineToProbesMap;
-    private final Map<LineLocation, List<Instrument>> attachments = new HashMap<>();
+    private final Instrumenter instrumenter;
 
-    public AttachmentsManager(RubyContext context) {
+    public AttachmentsManager(RubyContext context, Instrumenter instrumenter) {
         this.context = context;
-
-        lineToProbesMap = new LineToProbesMap();
-        context.getEnv().instrumenter().install(lineToProbesMap);
+        this.instrumenter = instrumenter;
     }
 
-    public synchronized Instrument attach(String file, int line, final DynamicObject block) {
+    public synchronized EventBinding<?> attach(String file, int line, final DynamicObject block) {
         assert RubyGuards.isRubyProc(block);
 
-        final String info = String.format("Truffle::Primitive.attach@%s:%d", file, line);
-
-        final EvalInstrumentListener listener = new EvalInstrumentListener() {
-
-            @Override
-            public void onExecution(Node node, VirtualFrame virtualFrame, Object o) {
-            }
-
-            @Override
-            public void onFailure(Node node, VirtualFrame virtualFrame, Exception e) {
-                if (e instanceof RuntimeException) {
-                    throw (RuntimeException) e;
-                } else {
-                    throw new RuntimeException(e);
-                }
-            }
-
-        };
-
         final Source source = context.getSourceCache().getBestSourceFuzzily(file);
-        
-        final LineLocation lineLocation = source.createLineLocation(line);
-
-        for (Probe probe : lineToProbesMap.findProbes(lineLocation)) {
-            if (probe.isTaggedAs(StandardSyntaxTag.STATEMENT)) {
-                final Map<String, Object> parameters = new HashMap<>();
-                parameters.put("section", probe.getProbedSourceSection());
-                parameters.put("block", block);
-                return context.getEnv().instrumenter().attach(probe, ATTACHMENT_SOURCE, listener, info, parameters);
+        SourceSectionFilter filter = SourceSectionFilter.newBuilder().sourceIs(source).lineIs(line).tagIs(InstrumentationTag.STATEMENT).build();
+        return instrumenter.attachFactory(filter, new EventNodeFactory() {
+            public EventNode create(EventContext eventContext) {
+                return new AttachmentEventNode(context, block);
             }
-        }
+        });
 
-        throw new RuntimeException("couldn't find a statement!");
+        // with the new API you are not notified if a statement is not actually installed
+        // because wrappers and installing is lazy. Is that a problem?
+
+        // throw new RuntimeException("couldn't find a statement!");
     }
 
-    public static class AttachmentRootNode extends RootNode {
+    private static class AttachmentEventNode extends EventNode {
 
         private final RubyContext context;
         private final DynamicObject block;
-
         @Child private DirectCallNode callNode;
 
-        public AttachmentRootNode(Class<? extends TruffleLanguage<?>> language, RubyContext context, SourceSection sourceSection, FrameDescriptor frameDescriptor, DynamicObject block) {
-            super(language, sourceSection, frameDescriptor);
+        public AttachmentEventNode(RubyContext context, DynamicObject block) {
             this.context = context;
             this.block = block;
+            this.callNode = Truffle.getRuntime().createDirectCallNode(Layouts.PROC.getCallTargetForType(block));
+
+            // (chumer): do we still want to clone and inline always? don't think so
+            if (callNode.isCallTargetCloningAllowed()) {
+                callNode.cloneCallTarget();
+            }
+            if (callNode.isInlinable()) {
+                callNode.forceInlining();
+            }
         }
 
         @Override
-        public Object execute(VirtualFrame frame) {
-            final MaterializedFrame callerFrame = (MaterializedFrame)frame.getArguments()[0];
-
-            final DynamicObject binding = BindingNodes.createBinding(context, callerFrame);
-
-            if (callNode == null) {
-                CompilerDirectives.transferToInterpreter();
-
-                callNode = insert(Truffle.getRuntime().createDirectCallNode(Layouts.PROC.getCallTargetForType(block)));
-
-                if (callNode.isCallTargetCloningAllowed()) {
-                    callNode.cloneCallTarget();
-                }
-
-                if (callNode.isInlinable()) {
-                    callNode.forceInlining();
-                }
-            }
-
-            callNode.call(frame, ProcNodes.packArguments(block, new Object[] { binding }));
-
-            return null;
+        public void onEnter(VirtualFrame frame) {
+            callNode.call(frame, ProcNodes.packArguments(block, new Object[] {  BindingNodes.createBinding(context, frame.materialize())}));
         }
-
     }
 
 }

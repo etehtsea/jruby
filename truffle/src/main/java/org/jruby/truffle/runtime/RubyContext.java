@@ -111,7 +111,7 @@ public class RubyContext extends ExecutionContext {
     private final RubiniusPrimitiveManager rubiniusPrimitiveManager;
     private final CoverageTracker coverageTracker;
     private final InstrumentationServerManager instrumentationServerManager;
-    private final AttachmentsManager attachmentsManager;
+    private AttachmentsManager attachmentsManager;
     private final SourceCache sourceCache;
     private final RubiniusConfiguration rubiniusConfiguration;
 
@@ -201,7 +201,6 @@ public class RubyContext extends ExecutionContext {
 
         runningOnWindows = Platform.getPlatform().getOS() == OS_TYPE.WINDOWS;
 
-        attachmentsManager = new AttachmentsManager(this);
         sourceCache = new SourceCache(new SourceLoader(this));
         rubiniusConfiguration = RubiniusConfiguration.create(this);
 
@@ -724,4 +723,7 @@ public class RubyContext extends ExecutionContext {
         return Layouts.HANDLE.createHandle(coreLibrary.getHandleFactory(), object);
     }
 
+    public void setAttachmentsManager(AttachmentsManager attachmentsManager) {
+        this.attachmentsManager = attachmentsManager;
+    }
 }

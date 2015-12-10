@@ -61,45 +61,20 @@ public class LazyRubyRootNode extends RootNode {
         if (callNode == null || context != cachedContext) {
             CompilerDirectives.transferToInterpreter();
 
-            if (AttachmentsManager.ATTACHMENT_SOURCE == source) {
-                final SourceSection sourceSection = (SourceSection) frame.getArguments()[getIndex("section")];
-                final DynamicObject block = (DynamicObject) frame.getArguments()[getIndex("block")];
+            final TranslatorDriver translator = new TranslatorDriver(context);
+            final RubyRootNode rootNode = translator.parse(context, source, UTF8Encoding.INSTANCE, ParserContext.TOP_LEVEL, null, true, null);
+            final CallTarget callTarget = Truffle.getRuntime().createCallTarget(rootNode);
 
-                final RootNode rootNode = new AttachmentsManager.AttachmentRootNode(RubyLanguage.class, cachedContext, sourceSection, null, block);
-                final CallTarget callTarget = Truffle.getRuntime().createCallTarget(rootNode);
+            callNode = insert(Truffle.getRuntime().createDirectCallNode(callTarget));
+            callNode.forceInlining();
 
-                callNode = insert(Truffle.getRuntime().createDirectCallNode(callTarget));
-                callNode.forceInlining();
-            } else {
-                final TranslatorDriver translator = new TranslatorDriver(context);
-                final RubyRootNode rootNode = translator.parse(context, source, UTF8Encoding.INSTANCE, ParserContext.TOP_LEVEL, null, true, null);
-                final CallTarget callTarget = Truffle.getRuntime().createCallTarget(rootNode);
-
-                callNode = insert(Truffle.getRuntime().createDirectCallNode(callTarget));
-                callNode.forceInlining();
-
-                mainObject = context.getCoreLibrary().getMainObject();
-                method = new InternalMethod(rootNode.getSharedMethodInfo(), rootNode.getSharedMethodInfo().getName(),
-                        context.getCoreLibrary().getObjectClass(), Visibility.PUBLIC, callTarget);
-            }
-        }
-
-        if (method == null) {
-            final MaterializedFrame callerFrame = Truffle.getRuntime().getCallerFrame().getFrame(FrameInstance.FrameAccess.MATERIALIZE, false).materialize();
-            return callNode.call(frame, new Object[] { callerFrame });
+            mainObject = context.getCoreLibrary().getMainObject();
+            method = new InternalMethod(rootNode.getSharedMethodInfo(), rootNode.getSharedMethodInfo().getName(),
+                    context.getCoreLibrary().getObjectClass(), Visibility.PUBLIC, callTarget);
         }
 
         return callNode.call(frame,
                 RubyArguments.pack(method, null, null, mainObject, null, DeclarationContext.TOP_LEVEL, frame.getArguments()));
-    }
-
-    private int getIndex(String name) {
-        for (int i = 0; i < argumentNames.length; i++) {
-            if (name.equals(argumentNames[i])) {
-                return i;
-            }
-        }
-        return -1;
     }
 
 }

@@ -95,6 +95,7 @@ public class BacktraceFormatter {
 
             return lines;
         } catch (Exception e) {
+            e.printStackTrace();
             return Arrays.asList(String.format("(exception while constructing backtrace: %s %s)", e.getMessage(), e.getStackTrace()[0].toString()));
         }
     }

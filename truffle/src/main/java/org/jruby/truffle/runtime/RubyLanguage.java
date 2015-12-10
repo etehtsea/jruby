@@ -15,6 +15,8 @@ import com.oracle.truffle.api.TruffleLanguage;
 import com.oracle.truffle.api.frame.MaterializedFrame;
 import com.oracle.truffle.api.instrument.Visualizer;
 import com.oracle.truffle.api.instrument.WrapperNode;
+import com.oracle.truffle.api.instrumentation.InstrumentationLanguage;
+import com.oracle.truffle.api.instrumentation.Instrumenter;
 import com.oracle.truffle.api.interop.ForeignAccess;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.Node;
@@ -26,9 +28,10 @@ import org.jruby.truffle.nodes.LazyRubyRootNode;
 import org.jruby.truffle.nodes.RubyGuards;
 import org.jruby.truffle.nodes.RubyNode;
 import org.jruby.truffle.nodes.instrument.RubyWrapperNode;
+import org.jruby.truffle.runtime.subsystems.AttachmentsManager;
 
 @TruffleLanguage.Registration(name = "Ruby", version = Constants.RUBY_VERSION, mimeType = RubyLanguage.MIME_TYPE)
-public class RubyLanguage extends TruffleLanguage<RubyContext> {
+public class RubyLanguage extends TruffleLanguage<RubyContext> implements InstrumentationLanguage<RubyContext> {
 
     public static class JRubyContextWrapper implements TruffleObject {
 
@@ -136,4 +139,8 @@ public class RubyLanguage extends TruffleLanguage<RubyContext> {
         return super.findContext(node);
     }
 
+    @Override
+    public void installInstrumentations(RubyContext context, Instrumenter instrumenter) {
+        context.setAttachmentsManager(new AttachmentsManager(context, instrumenter));
+    }
 }
