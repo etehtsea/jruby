@@ -15,6 +15,7 @@ import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.TypeSystemReference;
 import com.oracle.truffle.api.frame.*;
+import com.oracle.truffle.api.instrumentation.*;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
 import com.oracle.truffle.api.object.DynamicObject;
@@ -24,7 +25,6 @@ import jnr.ffi.provider.MemoryManager;
 import jnr.posix.POSIX;
 
 import org.jcodings.specific.UTF8Encoding;
-import org.jruby.truffle.nodes.instrument.RubyWrapperNode;
 import org.jruby.truffle.runtime.NotProvided;
 import org.jruby.truffle.runtime.RubyContext;
 import org.jruby.truffle.runtime.core.StringOperations;
@@ -46,7 +46,8 @@ import org.jcodings.specific.USASCIIEncoding;
 
 @TypeSystemReference(RubyTypes.class)
 @ImportStatic(RubyGuards.class)
-public abstract class RubyNode extends Node {
+@GenerateWrapperNode
+public abstract class RubyNode extends Node implements InstrumentableNode {
 
     private final RubyContext context;
 
@@ -229,4 +230,17 @@ public abstract class RubyNode extends Node {
         return getContext().inlineRubyHelper(this, frame, expression, arguments);
     }
 
+    @Override
+    public InstrumentationTagSet getInstrumentationTags() {
+        if (atNewline) {
+            return InstrumentationTagSet.of(InstrumentationTag.STATEMENT);
+        } else {
+            return InstrumentationTagSet.noneOf();
+        }
+    }
+
+    @Override
+    public InstrumentationWrapperNode createInstrumentationWrapper(ProbeNode probeNode) {
+        return RubyNodeWrapper.create(context, getSourceSection(), this, probeNode);
+    }
 }
