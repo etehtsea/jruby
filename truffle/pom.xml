@@ -110,6 +110,8 @@ DO NOT MODIFIY - GENERATED CODE
                 <annotationProcessor>com.oracle.truffle.dsl.processor.TruffleProcessor</annotationProcessor>
                 <annotationProcessor>com.oracle.truffle.dsl.processor.verify.VerifyTruffleProcessor</annotationProcessor>
                 <annotationProcessor>com.oracle.truffle.dsl.processor.LanguageRegistrationProcessor</annotationProcessor>
+                <annotationProcessor>com.oracle.truffle.dsl.processor.InstrumentationRegistrationProcessor</annotationProcessor>
+                <annotationProcessor>com.oracle.truffle.dsl.processor.GenerateWrapperNodeProcessor</annotationProcessor>
               </annotationProcessors>
               <generatedSourcesDirectory>target/generated-sources</generatedSourcesDirectory>
               <compilerArgs>
