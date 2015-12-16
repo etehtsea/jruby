@@ -28,6 +28,7 @@ import com.oracle.truffle.api.utilities.ConditionProfile;
 
 import org.jcodings.specific.USASCIIEncoding;
 import org.jcodings.specific.UTF8Encoding;
+import org.jruby.truffle.format.parser.PackCompiler;
 import org.jruby.truffle.nodes.RubyGuards;
 import org.jruby.truffle.nodes.RubyNode;
 import org.jruby.truffle.nodes.RubyRootNode;
@@ -46,7 +47,6 @@ import org.jruby.truffle.nodes.locals.ReadDeclarationVariableNode;
 import org.jruby.truffle.nodes.methods.DeclarationContext;
 import org.jruby.truffle.nodes.objects.*;
 import org.jruby.truffle.nodes.yield.YieldDispatchHeadNode;
-import org.jruby.truffle.format.parser.PackParser;
 import org.jruby.truffle.format.runtime.PackResult;
 import org.jruby.truffle.format.runtime.exceptions.*;
 import org.jruby.truffle.runtime.NotProvided;
@@ -1439,7 +1439,9 @@ public abstract class ArrayNodes {
         @Specialization(guards = "size >= 0")
         public DynamicObject initialize(DynamicObject array, int size, int defaultValue, NotProvided block) {
             final int[] store = new int[size];
-            Arrays.fill(store, defaultValue);
+            if (defaultValue != 0) {
+                Arrays.fill(store, defaultValue);
+            }
             Layouts.ARRAY.setStore(array, store);
             Layouts.ARRAY.setSize(array, size);
             return array;
@@ -1454,7 +1456,9 @@ public abstract class ArrayNodes {
         @Specialization(guards = "size >= 0")
         public DynamicObject initialize(DynamicObject array, int size, long defaultValue, NotProvided block) {
             final long[] store = new long[size];
-            Arrays.fill(store, defaultValue);
+            if (defaultValue != 0L) {
+                Arrays.fill(store, defaultValue);
+            }
             Layouts.ARRAY.setStore(array, store);
             Layouts.ARRAY.setSize(array, size);
             return array;
@@ -1469,7 +1473,9 @@ public abstract class ArrayNodes {
         @Specialization(guards = "size >= 0")
         public DynamicObject initialize(DynamicObject array, int size, double defaultValue, NotProvided block) {
             final double[] store = new double[size];
-            Arrays.fill(store, defaultValue);
+            if (defaultValue != 0.0) {
+                Arrays.fill(store, defaultValue);
+            }
             Layouts.ARRAY.setStore(array, store);
             Layouts.ARRAY.setSize(array, size);
             return array;
@@ -2479,12 +2485,7 @@ public abstract class ArrayNodes {
         @TruffleBoundary
         protected CallTarget compileFormat(DynamicObject format) {
             assert RubyGuards.isRubyString(format);
-            try {
-                return new PackParser(getContext()).parse(format.toString(), false);
-            } catch (FormatException e) {
-                CompilerDirectives.transferToInterpreter();
-                throw new RaiseException(getContext().getCoreLibrary().argumentError(e.getMessage(), this));
-            }
+            return new PackCompiler(getContext(), this).compile(format.toString());
         }
 
         protected int getCacheLimit() {
