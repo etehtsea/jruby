@@ -14,7 +14,6 @@ import com.oracle.truffle.api.nodes.RootNode;
 import com.oracle.truffle.api.object.DynamicObject;
 import com.oracle.truffle.api.source.Source;
 import com.oracle.truffle.api.source.SourceSection;
-
 import org.jcodings.specific.UTF8Encoding;
 import org.jruby.runtime.Visibility;
 import org.jruby.truffle.nodes.methods.DeclarationContext;
@@ -62,7 +61,7 @@ public class LazyRubyRootNode extends RootNode {
             CompilerDirectives.transferToInterpreter();
 
             final TranslatorDriver translator = new TranslatorDriver(context);
-            final RubyRootNode rootNode = translator.parse(context, source, UTF8Encoding.INSTANCE, ParserContext.TOP_LEVEL, null, true, null);
+            final RubyRootNode rootNode = translator.parse(context, source, UTF8Encoding.INSTANCE, ParserContext.TOP_LEVEL, argumentNames, null, true, null);
             final CallTarget callTarget = Truffle.getRuntime().createCallTarget(rootNode);
 
             callNode = insert(Truffle.getRuntime().createDirectCallNode(callTarget));

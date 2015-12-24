@@ -9,22 +9,18 @@
  */
 package org.jruby.truffle.nodes.objectstorage;
 
-import org.jruby.truffle.runtime.Options;
-
 import com.oracle.truffle.api.Assumption;
-import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.Truffle;
 import com.oracle.truffle.api.dsl.Cached;
+import com.oracle.truffle.api.dsl.ImportStatic;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.nodes.Node;
-import com.oracle.truffle.api.object.DynamicObject;
-import com.oracle.truffle.api.object.FinalLocationException;
-import com.oracle.truffle.api.object.IncompatibleLocationException;
-import com.oracle.truffle.api.object.Location;
-import com.oracle.truffle.api.object.Property;
-import com.oracle.truffle.api.object.Shape;
+import com.oracle.truffle.api.object.*;
+import org.jruby.truffle.nodes.ShapeCachingGuards;
+import org.jruby.truffle.runtime.Options;
 
+@ImportStatic(ShapeCachingGuards.class)
 public abstract class WriteHeadObjectFieldNode extends Node {
 
     protected static final int CACHE_LIMIT = Options.FIELD_LOOKUP_CACHE;
@@ -83,12 +79,12 @@ public abstract class WriteHeadObjectFieldNode extends Node {
     }
 
     @Specialization(guards = "updateShape(object)")
-    public void updateShape(DynamicObject object, Object value) {
+    public void updateShapeAndWrite(DynamicObject object, Object value) {
         execute(object, value);
     }
 
     @TruffleBoundary
-    @Specialization(contains = { "writeExistingField", "writeNewField", "updateShape" })
+    @Specialization(contains = { "writeExistingField", "writeNewField", "updateShapeAndWrite" })
     public void writeUncached(DynamicObject object, Object value) {
         object.define(name, value, 0);
     }
@@ -110,11 +106,6 @@ public abstract class WriteHeadObjectFieldNode extends Node {
 
     protected Location getNewLocation(Shape newShape) {
         return newShape.getProperty(name).getLocation();
-    }
-
-    protected boolean updateShape(DynamicObject object) {
-        CompilerDirectives.transferToInterpreter();
-        return object.updateShape();
     }
 
     protected Assumption createAssumption() {

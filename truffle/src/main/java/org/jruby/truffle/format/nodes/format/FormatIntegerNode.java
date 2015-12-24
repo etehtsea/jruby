@@ -14,9 +14,8 @@ import com.oracle.truffle.api.dsl.NodeChild;
 import com.oracle.truffle.api.dsl.NodeChildren;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.object.DynamicObject;
-
 import org.jruby.truffle.format.nodes.PackNode;
-import org.jruby.truffle.format.parser.FormatDirective;
+import org.jruby.truffle.format.parser.PrintfTreeBuilder;
 import org.jruby.truffle.runtime.RubyContext;
 import org.jruby.truffle.runtime.layouts.Layouts;
 import org.jruby.util.ByteList;
@@ -63,6 +62,10 @@ public abstract class FormatIntegerNode extends PackNode {
                 formatted = bigInteger.toString();
                 break;
 
+            case 'o':
+                formatted = bigInteger.toString(8).toLowerCase(Locale.ENGLISH);
+                break;
+
             case 'x':
                 formatted = bigInteger.toString(16).toLowerCase(Locale.ENGLISH);
                 break;
@@ -94,15 +97,15 @@ public abstract class FormatIntegerNode extends PackNode {
 
         builder.append("%");
 
-        if (spacePadding != FormatDirective.DEFAULT) {
+        if (spacePadding != PrintfTreeBuilder.DEFAULT) {
             builder.append(" ");
             builder.append(spacePadding);
 
-            if (zeroPadding != FormatDirective.DEFAULT) {
+            if (zeroPadding != PrintfTreeBuilder.DEFAULT) {
                 builder.append(".");
                 builder.append(zeroPadding);
             }
-        } else if (zeroPadding != FormatDirective.DEFAULT) {
+        } else if (zeroPadding != PrintfTreeBuilder.DEFAULT) {
             builder.append("0");
             builder.append(zeroPadding);
         }

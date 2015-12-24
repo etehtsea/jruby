@@ -13,15 +13,14 @@ import com.oracle.truffle.api.CompilerDirectives;
 import com.oracle.truffle.api.CompilerDirectives.TruffleBoundary;
 import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.object.DynamicObject;
+import com.oracle.truffle.api.profiles.BranchProfile;
 import com.oracle.truffle.api.source.SourceSection;
-import com.oracle.truffle.api.utilities.BranchProfile;
 import org.jcodings.specific.UTF8Encoding;
 import org.jruby.truffle.nodes.core.FixnumOrBignumNode;
 import org.jruby.truffle.runtime.RubyContext;
 import org.jruby.truffle.runtime.control.RaiseException;
 import org.jruby.truffle.runtime.core.StringOperations;
 import org.jruby.truffle.runtime.layouts.Layouts;
-import org.jruby.util.StringSupport;
 
 import java.util.Locale;
 
@@ -70,15 +69,15 @@ public abstract class FloatPrimitiveNodes {
 
     }
 
-    @RubiniusPrimitive(name = "float_negative")
-    public static abstract class FloatNegativePrimitiveNode extends RubiniusPrimitiveNode {
+    @RubiniusPrimitive(name = "float_signbit_p")
+    public static abstract class FloatSignBitNode extends RubiniusPrimitiveNode {
 
-        public FloatNegativePrimitiveNode(RubyContext context, SourceSection sourceSection) {
+        public FloatSignBitNode(RubyContext context, SourceSection sourceSection) {
             super(context, sourceSection);
         }
 
         @Specialization
-        public boolean floatNegative(double value) {
+        public boolean floatSignBit(double value) {
             // Edge-cases: 0, NaN and infinity can all be negative
             return (Double.doubleToLongBits(value) >>> 63) == 1;
         }

@@ -17,10 +17,9 @@ import com.oracle.truffle.api.dsl.Specialization;
 import com.oracle.truffle.api.frame.VirtualFrame;
 import com.oracle.truffle.api.nodes.UnexpectedResultException;
 import com.oracle.truffle.api.object.DynamicObject;
+import com.oracle.truffle.api.profiles.BranchProfile;
+import com.oracle.truffle.api.profiles.ConditionProfile;
 import com.oracle.truffle.api.source.SourceSection;
-import com.oracle.truffle.api.utilities.BranchProfile;
-import com.oracle.truffle.api.utilities.ConditionProfile;
-
 import org.jcodings.specific.USASCIIEncoding;
 import org.jruby.truffle.nodes.RubyNode;
 import org.jruby.truffle.nodes.core.*;
@@ -34,7 +33,6 @@ import org.jruby.truffle.runtime.control.RaiseException;
 import org.jruby.truffle.runtime.core.CoreLibrary;
 import org.jruby.truffle.runtime.core.StringOperations;
 import org.jruby.truffle.runtime.layouts.Layouts;
-import org.jruby.util.StringSupport;
 
 import java.math.BigInteger;
 
@@ -1019,9 +1017,6 @@ public abstract class FixnumNodes {
     @CoreMethod(names = "bit_length")
     public abstract static class BitLengthNode extends CoreMethodArrayArgumentsNode {
 
-        private static final int INT_BITS = Integer.numberOfLeadingZeros(0);
-        private static final int LONG_BITS = Long.numberOfLeadingZeros(0);
-
         public BitLengthNode(RubyContext context, SourceSection sourceSection) {
             super(context, sourceSection);
         }
@@ -1032,7 +1027,7 @@ public abstract class FixnumNodes {
                 n = ~n;
             }
 
-            return INT_BITS - Integer.numberOfLeadingZeros(n);
+            return Integer.SIZE - Integer.numberOfLeadingZeros(n);
         }
 
         @Specialization
@@ -1041,7 +1036,7 @@ public abstract class FixnumNodes {
                 n = ~n;
             }
 
-            return LONG_BITS - Long.numberOfLeadingZeros(n);
+            return Long.SIZE - Long.numberOfLeadingZeros(n);
         }
 
     }

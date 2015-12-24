@@ -21,7 +21,6 @@ import com.oracle.truffle.api.interop.ForeignAccess;
 import com.oracle.truffle.api.interop.TruffleObject;
 import com.oracle.truffle.api.nodes.Node;
 import com.oracle.truffle.api.source.Source;
-import java.io.IOException;
 import org.jruby.Ruby;
 import org.jruby.runtime.Constants;
 import org.jruby.truffle.nodes.LazyRubyRootNode;
@@ -29,6 +28,8 @@ import org.jruby.truffle.nodes.RubyGuards;
 import org.jruby.truffle.nodes.RubyNode;
 import org.jruby.truffle.nodes.instrument.RubyWrapperNode;
 import org.jruby.truffle.runtime.subsystems.AttachmentsManager;
+
+import java.io.IOException;
 
 @TruffleLanguage.Registration(name = "Ruby", version = Constants.RUBY_VERSION, mimeType = RubyLanguage.MIME_TYPE)
 public class RubyLanguage extends TruffleLanguage<RubyContext> implements InstrumentationLanguage<RubyContext> {

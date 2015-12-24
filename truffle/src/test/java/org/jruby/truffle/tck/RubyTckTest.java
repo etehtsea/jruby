@@ -23,6 +23,8 @@ import static org.junit.Assert.*;
 
 public class RubyTckTest extends TruffleTCK {
 
+    private static PolyglotEngine engine;
+
     @Test
     public void checkVM() {
         PolyglotEngine engine = PolyglotEngine.newBuilder().build();
@@ -30,51 +32,23 @@ public class RubyTckTest extends TruffleTCK {
     }
 
     @Override
-    protected PolyglotEngine prepareVM() throws Exception {
-        final Source source = Source.fromText(
-                "def sum(a, b)\n"
-                        + "  a + b\n"
-                        + "end\n"
-                        + "def fourty_two\n"
-                        + "  42\n"
-                        + "end\n"
-                        + "def ret_nil\n"
-                        + "  nil\n"
-                        + "end\n"
-                        + "$invocations = 0\n"
-                        + "def count_invocations\n"
-                        + "  $invocations += 1\n"
-                        + "end\n"
-                        + "def apply_numbers(f)\n"
-                        + "  Truffle::Interop.execute(f, 18, 32) + 10\n"
-                        + "end\n"
-                        + "def compound_object\n"
-                        + "  obj = Object.new\n"
-                        + "  def obj.fourtyTwo; 42; end\n"
-                        + "  def obj.plus(a, b); a + b; end\n"
-                        + "  def obj.returnsNull; nil; end\n"
-                        + "  def obj.returnsThis; self; end\n"
-                        + "  obj\n"
-                        + "end\n"
-                        + "def identity(value)\n"
-                        + "  value\n"
-                        + "end\n"
-                        + "Truffle::Interop.export(\"sum_ints\", method(:sum))\n"
-                        + "Truffle::Interop.export(\"fourty_two\", method(:fourty_two))\n"
-                        + "Truffle::Interop.export(\"ret_nil\", method(:ret_nil))\n"
-                        + "Truffle::Interop.export(\"count_invocations\", method(:count_invocations))\n"
-                        + "Truffle::Interop.export(\"apply_numbers\", method(:apply_numbers))\n"
-                        + "Truffle::Interop.export(\"compound_object\", method(:compound_object))\n"
-                        + "Truffle::Interop.export(\"identity\", method(:identity))\n",
-                "test").withMimeType(mimeType());
-        PolyglotEngine engine = PolyglotEngine.newBuilder().build();
-        engine.eval(source);
+    protected synchronized PolyglotEngine prepareVM() throws Exception {
+        if (engine == null) {
+            engine = PolyglotEngine.newBuilder().build();
+            engine.eval(Source.fromFileName("src/test/ruby/tck.rb"));
+        }
+
         return engine;
     }
 
     @Override
+    protected String mimeType() {
+        return RubyLanguage.MIME_TYPE;
+    }
+
+    @Override
     protected String plusInt() {
-        return "sum_ints";
+        return "plus_int";
     }
 
     @Override
@@ -85,11 +59,6 @@ public class RubyTckTest extends TruffleTCK {
     @Override
     protected String fourtyTwo() {
         return "fourty_two";
-    }
-
-    @Override
-    protected String mimeType() {
-        return RubyLanguage.MIME_TYPE;
     }
 
     @Override
@@ -123,13 +92,37 @@ public class RubyTckTest extends TruffleTCK {
     }
 
     @Override
-    public void multiplyTwoVariables() throws Exception {
-        // Ignored temporarily
+    protected String multiplyCode(String firstName, String secondName) {
+        return firstName + " * " + secondName;
     }
 
     @Override
-    public void testEvaluateSource() throws Exception {
-        // Ignored temporarily
+    protected String evaluateSource() {
+        return "evaluate_source";
     }
-    
+
+    @Override
+    protected String complexAdd() {
+        return "complex_add";
+    }
+
+    @Override
+    protected String complexSumReal() {
+        return "complex_sum_real";
+    }
+
+    @Override
+    protected String complexCopy() {
+        return "complex_copy";
+    }
+
+    @Override
+    public void testCoExistanceOfMultipleLanguageInstances() throws Exception {
+        /*
+         * Not running this test as it clears the engine, but we're caching that globally to avoid creating tens of
+         * engines concurrently.
+         */
+
+    }
+
 }

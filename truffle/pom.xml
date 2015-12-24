@@ -30,7 +30,7 @@ DO NOT MODIFIY - GENERATED CODE
     <dependency>
       <groupId>org.antlr</groupId>
       <artifactId>antlr4-runtime</artifactId>
-      <version>4.5</version>
+      <version>4.5.1-1</version>
     </dependency>
     <dependency>
       <groupId>org.jruby</groupId>
@@ -61,6 +61,11 @@ DO NOT MODIFIY - GENERATED CODE
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>com.oracle.truffle</groupId>
+      <artifactId>truffle-instrumentation</artifactId>
+      <version>0.10-SNAPSHOT</version>
+    </dependency>
+    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
@@ -87,7 +92,7 @@ DO NOT MODIFIY - GENERATED CODE
       <plugin>
         <groupId>org.antlr</groupId>
         <artifactId>antlr4-maven-plugin</artifactId>
-        <version>4.5</version>
+        <version>4.5.1-1</version>
         <executions>
           <execution>
             <goals>

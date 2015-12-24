@@ -18,6 +18,7 @@ JRUBY_DIR = File.expand_path('../..', __FILE__)
 
 JDEBUG_PORT = 51819
 JDEBUG = "-J-agentlib:jdwp=transport=dt_socket,server=y,address=#{JDEBUG_PORT},suspend=y"
+JDEBUG_TEST = "-Dmaven.surefire.debug=-Xdebug -Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=#{JDEBUG_PORT} -Xnoagent -Djava.compiler=NONE"
 JEXCEPTION = "-Xtruffle.exceptions.print_java=true"
 
 # wait for sub-processes to handle the interrupt
@@ -37,13 +38,13 @@ module Utilities
     graal_locations = [
       ENV['GRAAL_BIN'],
       ENV["GRAAL_BIN_#{mangle_for_env(git_branch)}"],
-      "graalvm-jdk1.8.0/bin/java",
-      "../graalvm-jdk1.8.0/bin/java",
-      "../../graalvm-jdk1.8.0/bin/java",
+      "GraalVM-0.9/jre/bin/javao",
+      "../GraalVM-0.9/jre/bin/javao",
+      "../../GraalVM-0.9/jre/bin/javao",
     ].compact.map { |path| File.expand_path(path, JRUBY_DIR) }
 
     not_found = -> {
-      raise "couldn't find graal - download it from http://lafo.ssw.uni-linz.ac.at/graalvm/ and extract it into the JRuby repository or parent directory"
+      raise "couldn't find graal - download it as described in https://github.com/jruby/jruby/wiki/Downloading-GraalVM and extract it into the JRuby repository or parent directory"
     }
 
     graal_locations.find(not_found) do |location|
@@ -195,12 +196,12 @@ module Commands
     puts '    --server        run an instrumentation server on port 8080'
     puts '    --igv           make sure IGV is running and dump Graal graphs after partial escape (implies --graal)'
     puts '        --full      show all phases, not just up to the Truffle partial escape'
-    puts '    --jdebug        run a JDWP debug server on 8000'
+    puts '    --jdebug        run a JDWP debug server on #{JDEBUG_PORT}'
     puts '    --jexception[s] print java exceptions'
     puts 'jt e 14 + 2                                    evaluate an expression'
     puts 'jt puts 14 + 2                                 evaluate and print an expression'
     puts 'jt test                                        run all mri tests and specs'
-    puts 'jt test tck                                    run the Truffle Compatibility Kit tests'
+    puts 'jt test tck [--jdebug]                         run the Truffle Compatibility Kit tests'
     puts 'jt test mri                                    run mri tests'
     puts 'jt test specs                                  run all specs'
     puts 'jt test specs fast                             run all specs except sub-processes, GC, sleep, ...'
@@ -212,7 +213,7 @@ module Commands
     puts 'jt tag all spec/ruby/language                  tag all specs in this file, without running them'
     puts 'jt untag spec/ruby/language                    untag passing specs in this directory'
     puts 'jt untag spec/ruby/language/while_spec.rb      untag passing specs in this file'
-    puts 'jt bench debug [--ruby-backtrace] benchmark    run a single benchmark with options for compiler debugging'
+    puts 'jt bench debug [--ruby-backtrace] [vm-args] benchmark    run a single benchmark with options for compiler debugging'
     puts 'jt bench reference [benchmarks]                run a set of benchmarks and record a reference point'
     puts 'jt bench compare [benchmarks]                  run a set of benchmarks and compare against a reference point'
     puts '    benchmarks can be any benchmarks or group of benchmarks supported'
@@ -346,7 +347,12 @@ module Commands
       test_mri
     when 'pe' then test_pe(*rest)
     when 'specs' then test_specs('run', *rest)
-    when 'tck' then test_tck
+    when 'tck' then
+      args = []
+      if rest.include? '--jdebug'
+        args << JDEBUG_TEST
+      end
+      test_tck *args
     when 'mri' then test_mri(*rest)
     else
       if File.expand_path(path).start_with?("#{JRUBY_DIR}/test")
@@ -406,8 +412,8 @@ module Commands
   end
   private :test_specs
 
-  def test_tck
-    mvn 'test'
+  def test_tck(*args)
+    mvn *args + ['test']
   end
   private :test_tck
 
@@ -438,14 +444,24 @@ module Commands
     bench_args = ["#{bench_dir}/bin/bench9000"]
     case command
     when 'debug'
+      vm_args = ['-Djvmci.option.TraceTruffleCompilation=true', '-Djvmci.option.DumpOnError=true']
       if args.delete '--ruby-backtrace'
-        compilation_exceptions_behaviour = '-J-Djvmci.option.TruffleCompilationExceptionsAreThrown=true'
+        vm_args.push '-Djvmci.option.TruffleCompilationExceptionsAreThrown=true'
       else
-        compilation_exceptions_behaviour = '-J-Djvmci.option.TruffleCompilationExceptionsAreFatal=true'
+        vm_args.push '-Djvmci.option.TruffleCompilationExceptionsAreFatal=true'
       end
-      env_vars = env_vars.merge({'JRUBY_OPTS' => "-J-Djvmci.option.TraceTruffleCompilation=true #{compilation_exceptions_behaviour}'"})
+      remaining_args = []
+      args.each do |arg|
+        if arg.start_with? '-'
+          vm_args.push arg
+        else
+          remaining_args.push arg
+        end
+      end
+      env_vars["JRUBY_OPTS"] = vm_args.map{ |a| '-J' + a }.join(' ')
       bench_args += ['score', '--config', "#{bench_dir}/benchmarks/default.config.rb", 'jruby-dev-truffle-graal', '--show-commands', '--show-samples']
-      raise 'specify a single benchmark for run - eg classic-fannkuch-redux' if args.size != 1
+      raise 'specify a single benchmark for run - eg classic-fannkuch-redux' if remaining_args.size != 1
+      args = remaining_args
     when 'reference'
       bench_args += ['reference', '--config', "#{bench_dir}/benchmarks/default.config.rb", 'jruby-dev-truffle-graal', '--show-commands']
       args << "5" if args.empty?
