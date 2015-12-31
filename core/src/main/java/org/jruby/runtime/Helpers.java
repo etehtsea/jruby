@@ -2837,4 +2837,9 @@ public class Helpers {
         return Helpers.invoke(context, self, name, IRubyObject.NULL_ARRAY, callType, Block.NULL_BLOCK);
     }
 
+    public static byte[] subseq(byte[] ary, int start, int len) {
+        byte[] newAry = new byte[len];
+        System.arraycopy(ary, start, newAry, 0, len);
+        return newAry;
+    }
 }
